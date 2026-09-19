@@ -1,0 +1,26 @@
+#pragma once
+#include <string>
+#include <array>
+#include <cstdint>
+
+class Chip8
+{
+public:
+    Chip8();
+
+    bool loadRom(const std::string &path);
+    void cycle();
+
+private:
+    std::array<std::uint8_t, 4096> memory_{};
+    std::array<std::uint8_t, 16> v_{};
+    std::array<std::uint16_t, 16> stack_{};
+
+    std::uint16_t pc_ = 0x200;
+    std::uint16_t index_ = 0;
+    std::uint8_t sp_ = 0;
+
+    std::uint8_t delayTimer_ = 0;
+    std::uint8_t soundTimer_ = 0;
+    std::uint16_t currentRomLength = 0;
+};
