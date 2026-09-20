@@ -96,6 +96,30 @@ void Chip8::cycle()
     {
         std::cout << "Loading V" << x << " with " << nn << '\n';
         v_[x] = nn;
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+    }
+    else if (family == 7)
+    {
+        std::cout << "Adding V" << x << " with " << nn << '\n';
+        v_[x] += nn;
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+    }
+    else if (family == 8 && n == 4)
+    {
+        std::cout << "Adding V" << x << " with V" << y << '\n';
+        std::uint8_t aux = v_[x];
+        v_[x] += v_[y];
+        if (aux > v_[x])
+        {
+            std::cout << "V" << x << " overflowen, setting Vf to 1.\n";
+            v_[0x000f] = 1;
+        }
+        else
+        {
+            v_[0x000f] = 0;
+        }
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "Vf: " << int(v_[0x000f]) << "\n";
     }
     else
     {
