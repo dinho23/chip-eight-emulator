@@ -94,18 +94,53 @@ void Chip8::cycle()
 
     if (family == 6)
     {
+        // Load immediate value NN into register VX.
         std::cout << "Loading V" << x << " with " << nn << '\n';
         v_[x] = nn;
         std::cout << "V" << x << ": " << int(v_[x]) << "\n";
     }
     else if (family == 7)
     {
+        // Add immediate value NN to register VX. Does not effect VF.
         std::cout << "Adding V" << x << " with " << nn << '\n';
         v_[x] += nn;
         std::cout << "V" << x << ": " << int(v_[x]) << "\n";
     }
+    else if (family == 8 && n == 0)
+    {
+        // Copy the value in register VY into VX
+        std::cout << "Copying V" << y << " into  V" << x << '\n';
+        v_[x] = v_[y];
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "V" << y << ": " << int(v_[y]) << "\n";
+    }
+    else if (family == 8 && n == 1)
+    {
+        // Set VX equal to the bitwise OR of the values in VX and VY.
+        std::cout << "Bitwise OR of V" << x << "with  V" << y << '\n';
+        v_[x] = v_[x] | v_[y];
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "V" << y << ": " << int(v_[y]) << "\n";
+    }
+    else if (family == 8 && n == 2)
+    {
+        // Set VX equal to the bitwise AND of the values in VX and VY.
+        std::cout << "Bitwise AND of V" << x << "with  V" << y << '\n';
+        v_[x] = v_[x] & v_[y];
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "V" << y << ": " << int(v_[y]) << "\n";
+    }
+    else if (family == 8 && n == 3)
+    {
+        // Set VX equal to the bitwise XOR of the values in VX and VY.
+        std::cout << "Bitwise XOR of V" << x << "with  V" << y << '\n';
+        v_[x] = v_[x] ^ v_[y];
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "V" << y << ": " << int(v_[y]) << "\n";
+    }
     else if (family == 8 && n == 4)
     {
+        // Set VX equal to VX plus VY. In the case of an overflow VF is set to 1. Otherwise 0.
         std::cout << "Adding V" << x << " with V" << y << '\n';
         std::uint8_t aux = v_[x];
         v_[x] += v_[y];
@@ -118,6 +153,63 @@ void Chip8::cycle()
         {
             v_[0x000f] = 0;
         }
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "Vf: " << int(v_[0x000f]) << "\n";
+    }
+    else if (family == 8 && n == 5)
+    {
+        // Set VX equal to VX minus VY. In the case of an underflow VF is set 0. Otherwise 1. (VF = VX > VY)
+        std::cout << "Subtracting V" << x << " with V" << y << '\n';
+        std::uint8_t aux = v_[x];
+        v_[x] -= v_[y];
+        if (aux < v_[x])
+        {
+            std::cout << "V" << x << " underflowen, setting Vf to 0.\n";
+            v_[0x000f] = 0;
+        }
+        else
+        {
+            v_[0x000f] = 1;
+        }
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "Vf: " << int(v_[0x000f]) << "\n";
+    }
+    else if (family == 8 && n == 6)
+    {
+        // Set VX equal to VX bitshifted right 1. VF is set to the least significant bit of VX prior to the shift.
+        // Originally this opcode meant set VX equal to VY bitshifted right 1 but emulators and software seem to ignore VY now.
+        std::cout << "Setting V" << 0x000f << " equal to the least significant bit of VX.\n";
+        v_[0x000f] = v_[x] & 0x01;
+        std::cout << "Bitshifting V" << x << " rigth 1 bit.\n";
+        v_[x] = v_[x] >> 1;
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "Vf: " << int(v_[0x000f]) << "\n";
+    }
+    else if (family == 8 && n == 7)
+    {
+        // Set VX equal to VY minus VX. VF is set to 1 if VY > VX. Otherwise 0.
+        if (v_[y] >= v_[x])
+        {
+            v_[0x000f] = 1;
+        }
+        else
+        {
+            std::cout << "V" << x << " underflow detected, setting Vf to 0.\n";
+            v_[0x000f] = 0;
+        }
+        std::cout << "Subtracting V" << y << " with V" << x << '\n';
+        v_[x] = v_[y] - v_[x];
+        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
+        std::cout << "Vf: " << int(v_[0x000f]) << "\n";
+    }
+    else if (family == 8 && n == 0x000e)
+    {
+        // Set VX equal to VX bitshifted left 1. VF is set to the most significant bit of VX prior to the shift.
+        // Originally this opcode meant set VX equal to VY bitshifted left 1 but emulators and software seem to ignore VY now.
+        std::cout << "Setting V" << 0x000f << " equal to the most significant bit of VX.\n";
+        v_[0x000f] = (v_[x] & 0x80) >> 7;
+        std::cout << "Bitshifting V" << x << " left 1 bit.\n";
+        v_[x] = v_[x] << 1;
         std::cout << "V" << x << ": " << int(v_[x]) << "\n";
         std::cout << "Vf: " << int(v_[0x000f]) << "\n";
     }
