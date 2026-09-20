@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <bitset>
+#include <algorithm>
 
 Chip8::Chip8()
 {
@@ -92,7 +93,43 @@ void Chip8::cycle()
     std::cout << "NNN: " << nnn << "\n";
     std::cout << "NN: " << nn << "\n";
 
-    if (family == 6)
+    if (family == 1)
+    {
+        // Set PC to NNN.
+        pc_ = nnn;
+    }
+    else if (family == 2)
+    {
+        // Call subroutine a NNN.
+        // Increment the SP and put the current PC value on the top of the stack.
+        // Then set the PC to NNN. Generally there is a limit of 16 successive calls.
+        stack_.at(sp_) = pc_ + 2;
+        sp_ += 1;
+        pc_ = nnn;
+    }
+    else if (family == 3)
+    {
+        if (v_[x] == nn)
+        {
+            pc_ += 2;
+        }
+    }
+    else if (family == 4)
+    {
+        if (v_[x] != nn)
+        {
+            pc_ += 2;
+        }
+    }
+    else if (family == 5 && n == 0)
+    {
+        // Skip the next instruction if register VX equals VY.
+        if (v_[x] == v_[y])
+        {
+            pc_ += 2;
+        }
+    }
+    else if (family == 6)
     {
         // Load immediate value NN into register VX.
         std::cout << "Loading V" << x << " with " << nn << '\n';
@@ -213,10 +250,35 @@ void Chip8::cycle()
         std::cout << "V" << x << ": " << int(v_[x]) << "\n";
         std::cout << "Vf: " << int(v_[0x000f]) << "\n";
     }
+    else if (family == 9)
+    {
+        if (n == 0)
+        {
+            if (v_[x] != v_[y])
+            {
+                pc_ += 2;
+            }
+        }
+    }
     else
     {
         std::cout << "opcode not implemented yet.\n";
     }
 
-    pc_ += 2;
+    std::array<std::uint8_t, 2> pc_managed_by_instruction{1, 2};
+    auto it = std::find(pc_managed_by_instruction.begin(), pc_managed_by_instruction.end(), family);
+
+    if (it == pc_managed_by_instruction.end())
+    {
+        pc_ += 2;
+    }
+
+    std::cout << "PC: " << pc_ << "\n";
+    std::cout << "SP: " << int(sp_) << "\n";
+    std::cout << "Stack: ";
+    for (const auto &item : stack_)
+    {
+        std::cout << item << " ";
+    }
+    std::cout << "\n";
 }
