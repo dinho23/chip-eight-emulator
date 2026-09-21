@@ -15,6 +15,7 @@ private:
     std::array<std::uint8_t, 4096> memory_{};
     std::array<std::uint8_t, 16> v_{};
     std::array<std::uint16_t, 16> stack_{};
+    std::array<std::array<std::uint8_t, 64>, 32> display_{}; // 64x32 resolution, means 32 rows, 64 columns
 
     std::uint16_t pc_ = 0x200;
     std::uint16_t index_ = 0;

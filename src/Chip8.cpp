@@ -114,6 +114,14 @@ void Chip8::cycle()
         stack_.at(sp_) = 0;
         pc_increment_handled = true;
     }
+    else if (opCode == 0x00E0)
+    {
+        std::cout << "Clearing display.\n";
+        for (auto &item : display_)
+        {
+            item.fill(0);
+        }
+    }
     else if (family == 1)
     {
         // Set PC to NNN.
@@ -306,6 +314,36 @@ void Chip8::cycle()
         pc_ = nnn + v_.at(0);
         pc_increment_handled = true;
     }
+    else if (family == 0x000d)
+    {
+        // Display N-byte sprite starting at memory location I at (VX, VY).
+        // Each set bit of XOR-ed with what's already drawn.
+        // VF is set to 1 if a collision occurs. 0 otherwise.
+        std::cout << "Drawing " << n << "-byte sprite at (" << int(v_.at(x)) << "," << int(v_.at(y)) << ")\n";
+
+        v_.at(0x000f) = 0;
+
+        for (std::uint8_t i = 0; i < n; i++)
+        {
+            std::uint8_t sprite_byte = memory_[index_ + i];
+
+            for (std::uint8_t j = 0; j < 8; j++)
+            {
+                std::uint8_t sprite_pixel = (sprite_byte >> (7 - j)) & 1;
+
+                std::uint8_t screen_y = (v_[y] + i) % 32;
+                std::uint8_t screen_x = (v_[x] + j) % 64;
+
+                auto old_pixel = display_[screen_y][screen_x];
+                display_.at(screen_y).at(screen_x) = old_pixel ^ sprite_pixel;
+
+                if (old_pixel == 1 && sprite_pixel == 1)
+                {
+                    v_.at(0x000f) = 1;
+                }
+            }
+        }
+    }
     else if (family == 0x000c)
     {
         // Set VX equal to a random number ranging from 0 to 255 which is logically anded with NN.
@@ -372,6 +410,23 @@ void Chip8::cycle()
         {
             std::cout << "M[" << i << "]: " << int(memory_.at(i)) << "    ";
         }
+    }
+    std::cout << "\n";
+    std::cout << "DISPLAY:\n";
+    for (size_t i = 0; i < 32; i++)
+    {
+        for (size_t j = 0; j < 64; j++)
+        {
+            if (display_.at(i).at(j) == 0)
+            {
+                std::cout << ". ";
+            }
+            else
+            {
+                std::cout << "# ";
+            }
+        }
+        std::cout << "\n";
     }
     std::cout << "\n";
 }
