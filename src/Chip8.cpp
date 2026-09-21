@@ -86,26 +86,57 @@ void Chip8::cycle()
     std::uint16_t nnn = opCode & 0x0fff;
     std::uint16_t nn = opCode & 0x00ff;
 
+    std::cout << "OPCODE: " << opCode << "\n";
     std::cout << "FAMILY: " << family << "\n";
     std::cout << "X: " << x << "\n";
     std::cout << "Y: " << y << "\n";
     std::cout << "N: " << n << "\n";
     std::cout << "NNN: " << nnn << "\n";
     std::cout << "NN: " << nn << "\n";
+    std::cout << "Return opcode detected: " << (opCode == 0x00EE) << "\n";
 
-    if (family == 1)
+    bool pc_increment_handled = false;
+
+    if (opCode == 0x00EE)
+    {
+        // Return from subroutine. Set the PC to the address at the top of the stack and subtract 1 from the SP.
+
+        // Check whether there is a return address on the stack.
+        if (sp_ == 0)
+        {
+            std::cout << "Invalid return instruction given, stack is empty.\n";
+            return;
+        }
+
+        std::cout << "Returing from subroutine";
+        sp_ -= 1;
+        pc_ = stack_.at(sp_);
+        stack_.at(sp_) = 0;
+        pc_increment_handled = true;
+    }
+    else if (family == 1)
     {
         // Set PC to NNN.
         pc_ = nnn;
+        pc_increment_handled = true;
     }
     else if (family == 2)
     {
         // Call subroutine a NNN.
         // Increment the SP and put the current PC value on the top of the stack.
         // Then set the PC to NNN. Generally there is a limit of 16 successive calls.
+
+        // Check whether the stack has space for another return address.
+        if (sp_ == stack_.size())
+        {
+            std::cout << "Invalid call instruction given, stack is full.\n";
+            return;
+        }
+
         stack_.at(sp_) = pc_ + 2;
         sp_ += 1;
         pc_ = nnn;
+        pc_increment_handled = true;
     }
     else if (family == 3)
     {
@@ -265,10 +296,7 @@ void Chip8::cycle()
         std::cout << "opcode not implemented yet.\n";
     }
 
-    std::array<std::uint8_t, 2> pc_managed_by_instruction{1, 2};
-    auto it = std::find(pc_managed_by_instruction.begin(), pc_managed_by_instruction.end(), family);
-
-    if (it == pc_managed_by_instruction.end())
+    if (!pc_increment_handled)
     {
         pc_ += 2;
     }

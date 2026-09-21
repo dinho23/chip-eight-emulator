@@ -23,6 +23,9 @@ int main(int argc, char *argv[])
         chip8.cycle();
         chip8.cycle();
         chip8.cycle();
+        chip8.cycle();
+        chip8.cycle();
+        chip8.cycle();
     }
 
     return 0;
