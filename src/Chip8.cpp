@@ -93,7 +93,6 @@ void Chip8::cycle()
     std::cout << "N: " << n << "\n";
     std::cout << "NNN: " << nnn << "\n";
     std::cout << "NN: " << nn << "\n";
-    std::cout << "Return opcode detected: " << (opCode == 0x00EE) << "\n";
 
     bool pc_increment_handled = false;
 
@@ -140,6 +139,7 @@ void Chip8::cycle()
     }
     else if (family == 3)
     {
+        // Skip the next instruction if register VX is equal to NN.
         if (v_[x] == nn)
         {
             pc_ += 2;
@@ -147,6 +147,7 @@ void Chip8::cycle()
     }
     else if (family == 4)
     {
+        // Skip the next instruction if register VX is not equal to NN.
         if (v_[x] != nn)
         {
             pc_ += 2;
@@ -291,6 +292,41 @@ void Chip8::cycle()
             }
         }
     }
+    else if (family == 0x000a)
+    {
+        // Set I equal to NNN.
+        std::cout << "Setting Index: " << nnn << "\n";
+        index_ = nnn;
+    }
+    else if (family == 0x000b)
+    {
+        // Set the PC to NNN plus the value in V0.
+        std::cout << "Setting PC: " << nnn << " + " << int(v_.at(0)) << "\n";
+        pc_ = nnn + v_.at(0);
+        pc_increment_handled = true;
+    }
+    else if (family == 0x000f && nn == 0x0055)
+    {
+        // Store registers V0 through VX in memory starting at location I.
+        // I does not change.
+        std::cout << "Copying from registers into memory. Start index: " << index_ << " End index: " << index_ + x << "\n";
+
+        for (std::uint16_t i = 0; i <= x; i++)
+        {
+            memory_.at(i + index_) = v_.at(i);
+        }
+    }
+    else if (family == 0x000f && nn == 0x0065)
+    {
+        // Copy values from memory location I through I + X into registers V0 through VX.
+        // I does not change.
+        std::cout << "Copying from memory into registers. Start index: " << index_ << " End index: " << index_ + x << "\n";
+
+        for (std::uint16_t i = 0; i <= x; i++)
+        {
+            v_.at(i) = memory_.at(i + index_);
+        }
+    }
     else
     {
         std::cout << "opcode not implemented yet.\n";
@@ -303,10 +339,26 @@ void Chip8::cycle()
 
     std::cout << "PC: " << pc_ << "\n";
     std::cout << "SP: " << int(sp_) << "\n";
-    std::cout << "Stack: ";
+    std::cout << "INDEX: " << int(index_) << "\n";
+    std::cout << "STACK: ";
     for (const auto &item : stack_)
     {
-        std::cout << item << " ";
+        std::cout << int(item) << " ";
+    }
+    std::cout << "\n";
+    std::cout << "REGISTERS: ";
+    for (const auto &item : v_)
+    {
+        std::cout << int(item) << " ";
+    }
+    std::cout << "\n";
+    std::cout << "MEMORY: ";
+    for (size_t i = 0; i < 4096; i++)
+    {
+        if (memory_.at(i) != 0)
+        {
+            std::cout << "M[" << i << "]: " << int(memory_.at(i)) << "    ";
+        }
     }
     std::cout << "\n";
 }
