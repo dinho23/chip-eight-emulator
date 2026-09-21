@@ -5,6 +5,7 @@
 #include <vector>
 #include <bitset>
 #include <algorithm>
+#include <random>
 
 Chip8::Chip8()
 {
@@ -304,6 +305,18 @@ void Chip8::cycle()
         std::cout << "Setting PC: " << nnn << " + " << int(v_.at(0)) << "\n";
         pc_ = nnn + v_.at(0);
         pc_increment_handled = true;
+    }
+    else if (family == 0x000c)
+    {
+        // Set VX equal to a random number ranging from 0 to 255 which is logically anded with NN.
+        std::random_device rd;
+        std::uniform_int_distribution<int> distribution(0, 255);
+        std::uint8_t random_number = distribution(rd);
+
+        std::cout << std::dec;
+        std::cout << "Setting V" << x << " to randomly generated number: " << int(random_number) << " ANDed with " << nn << "\n";
+        std::cout << std::hex;
+        v_.at(x) = random_number & nn;
     }
     else if (family == 0x000f && nn == 0x0055)
     {
