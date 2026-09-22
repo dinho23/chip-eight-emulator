@@ -10,6 +10,7 @@ public:
 
     bool loadRom(const std::string &path);
     void cycle();
+    void tickTimers();
 
 private:
     std::array<std::uint8_t, 4096> memory_{};

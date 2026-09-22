@@ -1,11 +1,9 @@
 #include <iostream>
+#include <chrono>
 #include <Chip8.h>
 
 int main(int argc, char *argv[])
 {
-    Chip8 chip8;
-    std::cout << "Read:" << argc << " arguments.\n";
-
     if (argc > 2)
     {
         std::cout << "Too many arguments were given.";
@@ -17,11 +15,36 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    if (chip8.loadRom(argv[1]))
+    Chip8 chip8;
+
+    if (!chip8.loadRom(argv[1]))
     {
-        chip8.cycle();
-        chip8.cycle();
-        chip8.cycle();
+        return 0;
+    }
+
+    auto startTime = std::chrono::steady_clock::now();
+
+    auto lastTimerTick = startTime;
+    auto timerInterval = std::chrono::nanoseconds(1'000'000'000 / 60); // 1 second = 1 bilion nanoseconds
+
+    auto lastCpuTick = startTime;
+    auto cpuInterval = std::chrono::nanoseconds(1'000'000'000 / 700);
+
+    while (true)
+    {
+        auto currentTime = std::chrono::steady_clock::now();
+
+        while (currentTime >= lastCpuTick + cpuInterval)
+        {
+            lastCpuTick += cpuInterval;
+            chip8.cycle();
+        }
+
+        while (currentTime >= lastTimerTick + timerInterval)
+        {
+            lastTimerTick += timerInterval;
+            chip8.tickTimers();
+        }
     }
 
     return 0;

@@ -592,3 +592,16 @@ void Chip8::cycle()
     // }
     // std::cout << "\n";
 }
+
+void Chip8::tickTimers()
+{
+    if (delayTimer_ > 0)
+    {
+        delayTimer_--;
+    }
+
+    if (soundTimer_ > 0)
+    {
+        soundTimer_--;
+    }
+}
