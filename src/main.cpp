@@ -1,5 +1,7 @@
 #include <iostream>
 #include <chrono>
+#include <thread>
+#include <algorithm>
 #include <optional>
 
 #include <Chip8.h>
@@ -136,6 +138,9 @@ int main(int argc, char *argv[])
     auto lastCpuTick = startTime;
     auto cpuInterval = std::chrono::nanoseconds(1'000'000'000 / 700);
 
+    auto lastRenderTick = startTime;
+    auto renderInterval = std::chrono::nanoseconds(1'000'000'000 / 60);
+
     bool running = true;
 
     while (running)
@@ -146,7 +151,7 @@ int main(int argc, char *argv[])
         {
             if (event.type == SDL_EVENT_QUIT)
             {
-                running = false;
+                return 0;
             }
 
             if (event.type == SDL_EVENT_KEY_DOWN)
@@ -182,25 +187,34 @@ int main(int argc, char *argv[])
             chip8.tickTimers();
         }
 
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        const auto &display = chip8.getDisplay();
-        for (int y = 0; y < 32; y++)
+        if (currentTime >= lastRenderTick + renderInterval)
         {
-            for (int x = 0; x < 64; x++)
+            lastRenderTick = currentTime;
+
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            const auto &display = chip8.getDisplay();
+            for (int y = 0; y < 32; y++)
             {
-                if (display[y][x] == 1)
+                for (int x = 0; x < 64; x++)
                 {
-                    SDL_FRect fillRect = {static_cast<float>(x) * scale, static_cast<float>(y) * scale, scale, scale};
-                    SDL_RenderFillRect(renderer, &fillRect);
+                    if (display[y][x] == 1)
+                    {
+                        SDL_FRect fillRect = {static_cast<float>(x) * scale, static_cast<float>(y) * scale, scale, scale};
+                        SDL_RenderFillRect(renderer, &fillRect);
+                    }
                 }
             }
+            if (!SDL_RenderPresent(renderer))
+            {
+                running = false;
+            }
         }
-        if (!SDL_RenderPresent(renderer))
-        {
-            running = false;
-        }
+
+        auto waitTime = std::min({lastCpuTick + cpuInterval, lastTimerTick + timerInterval, lastRenderTick + renderInterval});
+
+        std::this_thread::sleep_until(waitTime);
     }
 
     SDL_DestroyRenderer(renderer);
