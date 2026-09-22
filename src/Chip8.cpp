@@ -606,6 +606,17 @@ void Chip8::tickTimers()
     }
 }
 
+void Chip8::setKeyState(std::uint8_t key, bool pressed)
+{
+    if (key < 0x0 || key > 0xF)
+    {
+        std::cout << "Invalid key pressed.\n";
+        return;
+    }
+
+    keypad_.at(key) = pressed;
+}
+
 const std::array<std::array<std::uint8_t, 64>, 32> &Chip8::getDisplay() const
 {
     return display_;

@@ -1,10 +1,87 @@
 #include <iostream>
 #include <chrono>
+#include <optional>
 
 #include <Chip8.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+
+std::optional<std::uint8_t> getChipEightKey(const SDL_Scancode &key)
+{
+    //   PC               CHIP8
+    // 1 2 3 4           1 2 3 C
+    // Q W E R     →     4 5 6 D
+    // A S D F           7 8 9 E
+    // Z X C V           A 0 B F
+
+    if (key == SDL_SCANCODE_1)
+    {
+        return 0x1;
+    }
+    else if (key == SDL_SCANCODE_2)
+    {
+        return 0x2;
+    }
+    else if (key == SDL_SCANCODE_3)
+    {
+        return 0x3;
+    }
+    else if (key == SDL_SCANCODE_4)
+    {
+        return 0xC;
+    }
+    else if (key == SDL_SCANCODE_Q)
+    {
+        return 0x4;
+    }
+    else if (key == SDL_SCANCODE_W)
+    {
+        return 0x5;
+    }
+    else if (key == SDL_SCANCODE_E)
+    {
+        return 0x6;
+    }
+    else if (key == SDL_SCANCODE_R)
+    {
+        return 0xD;
+    }
+    else if (key == SDL_SCANCODE_A)
+    {
+        return 0x7;
+    }
+    else if (key == SDL_SCANCODE_S)
+    {
+        return 0x8;
+    }
+    else if (key == SDL_SCANCODE_D)
+    {
+        return 0x9;
+    }
+    else if (key == SDL_SCANCODE_F)
+    {
+        return 0xE;
+    }
+    else if (key == SDL_SCANCODE_Z)
+    {
+        return 0xA;
+    }
+    else if (key == SDL_SCANCODE_X)
+    {
+        return 0x0;
+    }
+    else if (key == SDL_SCANCODE_C)
+    {
+        return 0xB;
+    }
+    else if (key == SDL_SCANCODE_V)
+    {
+        return 0xF;
+    }
+
+    return std::nullopt;
+}
 
 int main(int argc, char *argv[])
 {
@@ -70,6 +147,24 @@ int main(int argc, char *argv[])
             if (event.type == SDL_EVENT_QUIT)
             {
                 running = false;
+            }
+
+            if (event.type == SDL_EVENT_KEY_DOWN)
+            {
+                auto key_code = getChipEightKey(event.key.scancode);
+                if (key_code)
+                {
+                    chip8.setKeyState(key_code.value(), true);
+                }
+            }
+
+            if (event.type == SDL_EVENT_KEY_UP)
+            {
+                auto key_code = getChipEightKey(event.key.scancode);
+                if (key_code)
+                {
+                    chip8.setKeyState(*key_code, false);
+                }
             }
         }
 

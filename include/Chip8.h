@@ -9,8 +9,12 @@ public:
     Chip8();
 
     bool loadRom(const std::string &path);
+
     void cycle();
     void tickTimers();
+
+    void setKeyState(std::uint8_t key, bool pressed);
+
     const std::array<std::array<std::uint8_t, 64>, 32> &getDisplay() const;
 
 private:
