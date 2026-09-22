@@ -9,6 +9,7 @@ public:
     Chip8();
 
     bool loadRom(const std::string &path);
+    bool isSoundActive() const;
 
     void cycle();
     void tickTimers();

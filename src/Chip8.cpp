@@ -146,6 +146,11 @@ bool Chip8::loadRom(const std::string &path)
     return false;
 }
 
+bool Chip8::isSoundActive() const
+{
+    return soundTimer_ > 0;
+}
+
 void Chip8::cycle()
 {
     std::uint16_t opCode = 0;
