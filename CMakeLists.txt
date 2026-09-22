@@ -2,12 +2,16 @@ cmake_minimum_required(VERSION 4.3)
 
 project(chip-8-emulator)
 
-include_directories(include)
+find_package(SDL3 REQUIRED CONFIG)
 
 add_executable(chip_eight)
 
 target_sources(chip_eight
   PRIVATE
-    main.cpp
+    src/main.cpp
     src/Chip8.cpp
 )
+
+target_include_directories(chip_eight PRIVATE include)
+
+target_link_libraries(chip_eight PRIVATE SDL3::SDL3)

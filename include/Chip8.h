@@ -11,6 +11,7 @@ public:
     bool loadRom(const std::string &path);
     void cycle();
     void tickTimers();
+    const std::array<std::array<std::uint8_t, 64>, 32> &getDisplay() const;
 
 private:
     std::array<std::uint8_t, 4096> memory_{};

@@ -605,3 +605,8 @@ void Chip8::tickTimers()
         soundTimer_--;
     }
 }
+
+const std::array<std::array<std::uint8_t, 64>, 32> &Chip8::getDisplay() const
+{
+    return display_;
+}
