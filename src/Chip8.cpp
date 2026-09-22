@@ -9,6 +9,81 @@
 
 Chip8::Chip8()
 {
+    // Load digits sprite into memory from address 0x0000 to 0x004F.
+    // A digit occupies 8x5 grid of pixels, so 5 locations in memory are ocuppied by one digit.
+
+    // Load digit 0.
+    memory_[0x0000] = 0xF0;
+    memory_[0x0001] = memory_[0x0002] = memory_[0x0003] = 0x90;
+    memory_[0x0004] = 0xF0;
+
+    // Load digit 1.
+    memory_[0x0005] = memory_[0x0007] = memory_[0x0008] = 0x20;
+    memory_[0x0006] = 0x60;
+    memory_[0x0009] = 0x70;
+
+    // Load digit 2.
+    memory_[0x000A] = memory_[0x000C] = memory_[0x000E] = 0xF0;
+    memory_[0x000B] = 0x10;
+    memory_[0x000D] = 0x80;
+
+    // Load digit 3.
+    memory_[0x000F] = memory_[0x0011] = memory_[0x0013] = 0xF0;
+    memory_[0x0010] = memory_[0x0012] = 0x10;
+
+    // Load digit 4.
+    memory_[0x0014] = memory_[0x0015] = 0x90;
+    memory_[0x0016] = 0xF0;
+    memory_[0x0017] = memory_[0x0018] = 0x10;
+
+    // Load digit 5.
+    memory_[0x0019] = memory_[0x001B] = memory_[0x001D] = 0xF0;
+    memory_[0x001A] = 0x80;
+    memory_[0x001C] = 0x10;
+
+    // Load digit 6.
+    memory_[0x001E] = memory_[0x0020] = memory_[0x0022] = 0xF0;
+    memory_[0x001F] = 0x80;
+    memory_[0x0021] = 0x90;
+
+    // Load digit 7.
+    memory_[0x0023] = 0xF0;
+    memory_[0x0024] = 0x10;
+    memory_[0x0025] = 0x20;
+    memory_[0x0026] = memory_[0x0027] = 0x40;
+
+    // Load digit 8.
+    memory_[0x0028] = memory_[0x002A] = memory_[0x002C] = 0xF0;
+    memory_[0x0029] = memory_[0x002B] = 0x90;
+
+    // Load digit 9.
+    memory_[0x002D] = memory_[0x002F] = memory_[0x0031] = 0xF0;
+    memory_[0x002E] = 0x90;
+    memory_[0x0030] = 0x10;
+
+    // Load digit A.
+    memory_[0x0032] = memory_[0x0034] = 0xF0;
+    memory_[0x0033] = memory_[0x0035] = memory_[0x0036] = 0x90;
+
+    // Load digit B.
+    memory_[0x0037] = memory_[0x0039] = memory_[0x003B] = 0xE0;
+    memory_[0x0038] = memory_[0x003A] = 0x90;
+
+    // Load digit C.
+    memory_[0x003C] = memory_[0x0040] = 0xF0;
+    memory_[0x003D] = memory_[0x003E] = memory_[0x003F] = 0x80;
+
+    // Load digit D.
+    memory_[0x0041] = memory_[0x0045] = 0xE0;
+    memory_[0x0042] = memory_[0x0043] = memory_[0x0044] = 0x90;
+
+    // Load digit E.
+    memory_[0x0046] = memory_[0x0048] = memory_[0x004A] = 0xF0;
+    memory_[0x0047] = memory_[0x0049] = 0x80;
+
+    // Load digit F.
+    memory_[0x004B] = memory_[0x004D] = 0xF0;
+    memory_[0x004C] = memory_[0x004E] = memory_[0x004F] = 0x80;
 }
 
 bool Chip8::loadRom(const std::string &path)
@@ -314,6 +389,18 @@ void Chip8::cycle()
         pc_ = nnn + v_.at(0);
         pc_increment_handled = true;
     }
+    else if (family == 0x000c)
+    {
+        // Set VX equal to a random number ranging from 0 to 255 which is logically anded with NN.
+        std::random_device rd;
+        std::uniform_int_distribution<int> distribution(0, 255);
+        std::uint8_t random_number = distribution(rd);
+
+        std::cout << std::dec;
+        std::cout << "Setting V" << x << " to randomly generated number: " << int(random_number) << " ANDed with " << nn << "\n";
+        std::cout << std::hex;
+        v_.at(x) = random_number & nn;
+    }
     else if (family == 0x000d)
     {
         // Display N-byte sprite starting at memory location I at (VX, VY).
@@ -344,17 +431,92 @@ void Chip8::cycle()
             }
         }
     }
-    else if (family == 0x000c)
+    else if (family == 0x000e && nn == 0x009e)
     {
-        // Set VX equal to a random number ranging from 0 to 255 which is logically anded with NN.
-        std::random_device rd;
-        std::uniform_int_distribution<int> distribution(0, 255);
-        std::uint8_t random_number = distribution(rd);
+        // Skip the following instruction if the key represented by the value in VX is pressed.
+        if (keypad_.at(v_.at(x)))
+        {
+            std::cout << "Keypad " << v_.at(x) << " pressed. Skipping next instruction.\n";
+            pc_ += 2;
+        }
+    }
+    else if (family == 0x000e && nn == 0x00a1)
+    {
+        // Skip the following instruction if the key represented by the value in VX is not pressed.
+        if (!keypad_.at(v_.at(x)))
+        {
+            std::cout << "Keypad " << v_.at(x) << " not pressed. Skipping next instruction.\n";
+            pc_ += 2;
+        }
+    }
+    else if (family == 0x000f && nn == 0x0007)
+    {
+        // Set VX equal to the delay timer.
+        std::cout << "Setting V" << x << " equal to delay timer: " << delayTimer_ << "\n";
+        v_.at(x) = delayTimer_;
+    }
+    else if (family == 0x000f && nn == 0x000a)
+    {
+        pc_increment_handled = true;
+        // Wait for a key press and store the value of the key into VX.
+        for (std::size_t i = 0; i < keypad_.size(); i++)
+        {
+            if (keypad_.at(i))
+            {
+                v_.at(x) = i;
+                pc_increment_handled = false;
+                break;
+            }
+        }
+    }
+    else if (family == 0x000f && nn == 0x0015)
+    {
+        // Set the delay timer DT to VX.
+        std::cout << "Setting delay timer to V" << x << ": " << int(v_.at(x)) << "\n";
+        delayTimer_ = v_.at(x);
+    }
+    else if (family == 0x000f && nn == 0x0018)
+    {
+        // Set the sound timer ST to VX.
+        std::cout << "Setting sound timer to V" << x << ": " << int(v_.at(x)) << "\n";
+        soundTimer_ = v_.at(x);
+    }
+    else if (family == 0x000f && nn == 0x001e)
+    {
+        // Add VX to I.
+        // VF is set to 1 if I > 0x0FFF. Otherwise set to 0.
+        std::cout << "Adding V" << x << ": " << int(v_.at(x)) << "to Index.\n";
 
-        std::cout << std::dec;
-        std::cout << "Setting V" << x << " to randomly generated number: " << int(random_number) << " ANDed with " << nn << "\n";
-        std::cout << std::hex;
-        v_.at(x) = random_number & nn;
+        index_ += v_.at(x);
+
+        if (index_ > 0x0fff)
+        {
+            v_.at(0x000f) = 1;
+        }
+        else
+        {
+            v_.at(0x000f) = 0;
+        }
+    }
+    else if (family == 0x000f && nn == 0x0029)
+    {
+        // Set I = location of sprite for digit Vx.
+        // The value of I is set to the location for the hexadecimal sprite corresponding to the value of Vx.
+        // Memory location for the digits starts at 0x00 through 0x4F, and they are sorted ascending.
+        // Sprites are 8x5 meaning each digit starts at an address multiple of 5.
+        std::uint8_t digit = v_.at(x) & 0x0f;
+
+        index_ = digit * 5;
+    }
+    else if (family == 0x000f && nn == 0x0033)
+    {
+        // Convert the value stored in VX to BCD and store the 3 digits at memory location I through I+2.
+        // I does not change.
+        std::cout << "Converting V" << x << ": " << int(v_.at(x)) << " to BCD.\n";
+
+        memory_[index_] = v_.at(x) / 100;
+        memory_[index_ + 1] = (v_.at(x) / 10) % 10;
+        memory_[index_ + 2] = v_.at(x) % 10;
     }
     else if (family == 0x000f && nn == 0x0055)
     {
@@ -412,21 +574,21 @@ void Chip8::cycle()
         }
     }
     std::cout << "\n";
-    std::cout << "DISPLAY:\n";
-    for (size_t i = 0; i < 32; i++)
-    {
-        for (size_t j = 0; j < 64; j++)
-        {
-            if (display_.at(i).at(j) == 0)
-            {
-                std::cout << ". ";
-            }
-            else
-            {
-                std::cout << "# ";
-            }
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
+    // std::cout << "DISPLAY:\n";
+    // for (size_t i = 0; i < 32; i++)
+    // {
+    //     for (size_t j = 0; j < 64; j++)
+    //     {
+    //         if (display_.at(i).at(j) == 0)
+    //         {
+    //             std::cout << ". ";
+    //         }
+    //         else
+    //         {
+    //             std::cout << "# ";
+    //         }
+    //     }
+    //     std::cout << "\n";
+    // }
+    // std::cout << "\n";
 }
