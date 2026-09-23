@@ -336,40 +336,55 @@ void Chip8::cycle()
     {
         // Set VX equal to VX bitshifted right 1. VF is set to the least significant bit of VX prior to the shift.
         // Originally this opcode meant set VX equal to VY bitshifted right 1 but emulators and software seem to ignore VY now.
-        std::cout << "Setting V" << 0x000f << " equal to the least significant bit of VX.\n";
-        v_[0x000f] = v_[x] & 0x01;
-        std::cout << "Bitshifting V" << x << " rigth 1 bit.\n";
-        v_[x] = v_[x] >> 1;
-        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
-        std::cout << "Vf: " << int(v_[0x000f]) << "\n";
+        std::cout << "Getting the least significant bit of VX.\n";
+        std::uint8_t flag = v_.at(x) & 0x01;
+
+        std::cout << "Bitshifting V" << x << " right 1 bit.\n";
+        v_.at(x) = v_.at(x) >> 1;
+
+        std::cout << "Assigning the result to VF.\n";
+        v_.at(0xF) = flag;
+
+        std::cout << "V" << x << ": " << int(v_.at(x)) << "\n";
+        std::cout << "Vf: " << int(v_.at(0xF)) << "\n";
     }
     else if (family == 8 && n == 7)
     {
         // Set VX equal to VY minus VX. VF is set to 1 if VY > VX. Otherwise 0.
-        if (v_[y] >= v_[x])
+        std::uint8_t oldVY = v_.at(y);
+        std::uint8_t oldVX = v_.at(x);
+
+        std::cout << "Subtracting V" << y << " with V" << x << '\n';
+        v_.at(x) = oldVY - oldVX;
+
+        if (oldVY >= oldVX)
         {
-            v_[0x000f] = 1;
+            v_.at(0xF) = 1;
         }
         else
         {
             std::cout << "V" << x << " underflow detected, setting Vf to 0.\n";
-            v_[0x000f] = 0;
+            v_.at(0xF) = 0;
         }
-        std::cout << "Subtracting V" << y << " with V" << x << '\n';
-        v_[x] = v_[y] - v_[x];
-        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
-        std::cout << "Vf: " << int(v_[0x000f]) << "\n";
+
+        std::cout << "V" << x << ": " << int(v_.at(x)) << "\n";
+        std::cout << "Vf: " << int(v_.at(0xF)) << "\n";
     }
-    else if (family == 8 && n == 0x000e)
+    else if (family == 8 && n == 0xE)
     {
         // Set VX equal to VX bitshifted left 1. VF is set to the most significant bit of VX prior to the shift.
         // Originally this opcode meant set VX equal to VY bitshifted left 1 but emulators and software seem to ignore VY now.
-        std::cout << "Setting V" << 0x000f << " equal to the most significant bit of VX.\n";
-        v_[0x000f] = (v_[x] & 0x80) >> 7;
+        std::cout << "Getting the most significant bit of VX.\n";
+        std::uint8_t flag = (v_.at(x) & 0x80) >> 7;
+
         std::cout << "Bitshifting V" << x << " left 1 bit.\n";
-        v_[x] = v_[x] << 1;
-        std::cout << "V" << x << ": " << int(v_[x]) << "\n";
-        std::cout << "Vf: " << int(v_[0x000f]) << "\n";
+        v_.at(x) = v_.at(x) << 1;
+
+        std::cout << "Assigning the result to VF.\n";
+        v_.at(0xF) = flag;
+
+        std::cout << "V" << x << ": " << int(v_.at(x)) << "\n";
+        std::cout << "Vf: " << int(v_[0xF]) << "\n";
     }
     else if (family == 9)
     {
