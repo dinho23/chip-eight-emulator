@@ -167,13 +167,13 @@ void Chip8::cycle()
     std::uint16_t nnn = opCode & 0x0fff;
     std::uint16_t nn = opCode & 0x00ff;
 
-    std::cout << "OPCODE: " << opCode << "\n";
-    std::cout << "FAMILY: " << family << "\n";
-    std::cout << "X: " << x << "\n";
-    std::cout << "Y: " << y << "\n";
-    std::cout << "N: " << n << "\n";
-    std::cout << "NNN: " << nnn << "\n";
-    std::cout << "NN: " << nn << "\n";
+    // std::cout << "OPCODE: " << opCode << "\n";
+    // std::cout << "FAMILY: " << family << "\n";
+    // std::cout << "X: " << x << "\n";
+    // std::cout << "Y: " << y << "\n";
+    // std::cout << "N: " << n << "\n";
+    // std::cout << "NNN: " << nnn << "\n";
+    // std::cout << "NN: " << nn << "\n";
 
     bool pc_increment_handled = false;
 
@@ -478,15 +478,17 @@ void Chip8::cycle()
     else if (family == 0x000f && nn == 0x000a)
     {
         pc_increment_handled = true;
-        // Wait for a key press and store the value of the key into VX.
-        for (std::size_t i = 0; i < keypad_.size(); i++)
+
+        if (fx0aState == Fx0aState::Idle)
         {
-            if (keypad_.at(i))
-            {
-                v_.at(x) = i;
-                pc_increment_handled = false;
-                break;
-            }
+            fx0aState = Fx0aState::WaitingForPress;
+        }
+        else if (fx0aState == Fx0aState::Ready && fx0aKey_.has_value())
+        {
+            v_.at(x) = fx0aKey_.value();
+            fx0aKey_.reset();
+            pc_increment_handled = false;
+            fx0aState = Fx0aState::Idle;
         }
     }
     else if (family == 0x000f && nn == 0x0015)
@@ -586,13 +588,24 @@ void Chip8::tickTimers()
 
 void Chip8::setKeyState(std::uint8_t key, bool pressed)
 {
-    if (key < 0x0 || key > 0xF)
+    if (key > 0xF)
     {
         std::cout << "Invalid key pressed.\n";
         return;
     }
 
+    bool wasPressed = keypad_.at(key);
     keypad_.at(key) = pressed;
+
+    if (fx0aState == Fx0aState::WaitingForPress && pressed && !wasPressed)
+    {
+        fx0aKey_ = key;
+        fx0aState = Fx0aState::WaitingForRelease;
+    }
+    if (fx0aState == Fx0aState::WaitingForRelease && !pressed && wasPressed && fx0aKey_ == key)
+    {
+        fx0aState = Fx0aState::Ready;
+    }
 }
 
 const std::array<std::array<std::uint8_t, 64>, 32> &Chip8::getDisplay() const

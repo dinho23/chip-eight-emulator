@@ -273,8 +273,8 @@ Current results:
 - Corax+ opcode test: passing
 - Flags test: passing
 - Quirks test: behavior verified and documented
-- Keypad test: pending
-- Beep test: pending
+- Keypad test: passing
+- Beep test: passing
 
 ## Project Structure
 
