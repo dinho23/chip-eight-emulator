@@ -451,19 +451,27 @@ void Chip8::cycle()
             }
         }
     }
-    else if (family == 0xE && nn == 0x9e)
+    else if (family == 0xE && nn == 0x9E)
     {
         // Skip the following instruction if the key represented by the value in VX is pressed.
-        if (keypad_.at(v_.at(x)))
+        if (v_.at(x) >= keypad_.size())
         {
-            LOG_DEBUG("Keypad " << v_.at(x) << " pressed. Skipping next instruction.\n");
+            LOG_DEBUG("Invalid key given in V" << x << "\n");
+        }
+        else if (keypad_.at(v_.at(x)))
+        {
+            LOG_DEBUG("Keypad " << int(v_.at(x)) << " pressed. Skipping next instruction.\n");
             pc_ += 2;
         }
     }
-    else if (family == 0xE && nn == 0xa1)
+    else if (family == 0xE && nn == 0xA1)
     {
         // Skip the following instruction if the key represented by the value in VX is not pressed.
-        if (!keypad_.at(v_.at(x)))
+        if (v_.at(x) >= keypad_.size())
+        {
+            LOG_DEBUG("Invalid key given in V" << x << "\n");
+        }
+        else if (!keypad_.at(v_.at(x)))
         {
             LOG_DEBUG("Keypad " << int(v_.at(x)) << " not pressed. Skipping next instruction.\n");
             pc_ += 2;
@@ -503,7 +511,7 @@ void Chip8::cycle()
         LOG_DEBUG("Setting sound timer to V" << x << ": " << int(v_.at(x)) << "\n");
         soundTimer_ = v_.at(x);
     }
-    else if (family == 0xF && nn == 0x001e)
+    else if (family == 0xF && nn == 0x001E)
     {
         // Add VX to I.
         // VF is set to 1 if I > 0x0FFF. Otherwise set to 0.
@@ -588,7 +596,7 @@ void Chip8::tickTimers()
 
 void Chip8::setKeyState(std::uint8_t key, bool pressed)
 {
-    if (key > 0xF)
+    if (key >= keypad_.size())
     {
         LOG_DEBUG("Invalid key pressed.\n");
         return;
