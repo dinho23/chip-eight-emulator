@@ -83,9 +83,16 @@ brew install cmake sdl3
 
 Configure and build:
 
+DEBUG
 ```bash
-cmake -S . -B build
-cmake --build build
+cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-debug
+```
+
+RELEASE
+```bash
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release
 ```
 
 ## Running
@@ -93,13 +100,13 @@ cmake --build build
 Pass a CHIP-8 ROM as the first argument:
 
 ```bash
-./build/chip_eight path/to/rom.ch8
+./build-release/chip_eight path/to/rom.ch8
 ```
 
 For example:
 
 ```bash
-./build/chip_eight roms/pong.ch8
+./build-release/chip_eight roms/pong.ch8
 ```
 
 ROM files are not included in this repository.

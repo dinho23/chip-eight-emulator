@@ -43,5 +43,4 @@ private:
 
     std::uint8_t delayTimer_ = 0;
     std::uint8_t soundTimer_ = 0;
-    std::uint16_t currentRomLength = 0;
 };

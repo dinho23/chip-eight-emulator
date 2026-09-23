@@ -8,6 +8,10 @@ add_executable(chip_eight)
 
 target_compile_features(chip_eight PRIVATE cxx_std_17)
 
+target_compile_definitions(chip_eight PRIVATE
+    $<$<CONFIG:Debug>:DEBUG>
+)
+
 target_sources(chip_eight
   PRIVATE
     src/main.cpp
