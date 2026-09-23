@@ -10,6 +10,19 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+constexpr int DISPLAY_SCALE = 15;
+constexpr int DISPLAY_WIDTH = 64;
+constexpr int DISPLAY_HEIGHT = 32;
+
+constexpr int CPU_FREQUENCY = 700;
+constexpr int TIMER_FREQUENCY = 60;
+constexpr int RENDER_FREQUENCY = 60;
+
+constexpr int AUDIO_SAMPLE_RATE = 48000;
+constexpr int AUDIO_TONE_FREQUENCY = 500;
+constexpr int AUDIO_BUFFER_MS = 10;
+constexpr std::int16_t AUDIO_AMPLITUDE = 3000;
+
 std::optional<std::uint8_t> getChipEightKey(const SDL_Scancode &key)
 {
     //   PC               CHIP8
@@ -90,21 +103,120 @@ std::vector<std::int16_t> generateToneBuffer()
 {
     std::vector<std::int16_t> sample{};
 
-    for (int i = 0; i < 480; i++)
+    for (int i = 0; i < AUDIO_SAMPLE_RATE / AUDIO_BUFFER_MS; i++)
     {
-        auto positionInWave = i % 96;
+        auto positionInWave = i % (AUDIO_SAMPLE_RATE / AUDIO_TONE_FREQUENCY);
 
-        if (positionInWave < 48)
+        if (positionInWave < AUDIO_SAMPLE_RATE / AUDIO_TONE_FREQUENCY / 2)
         {
-            sample.push_back(3000);
+            sample.push_back(AUDIO_AMPLITUDE);
         }
         else
         {
-            sample.push_back(-3000);
+            sample.push_back(-AUDIO_AMPLITUDE);
         }
     }
 
     return sample;
+}
+
+bool processEvents(Chip8 &chip8)
+{
+    SDL_Event event;
+
+    while (SDL_PollEvent(&event))
+    {
+        if (event.type == SDL_EVENT_QUIT)
+        {
+            return false;
+        }
+        else if (event.type == SDL_EVENT_KEY_DOWN)
+        {
+            auto key_code = getChipEightKey(event.key.scancode);
+            if (key_code)
+            {
+                chip8.setKeyState(key_code.value(), true);
+            }
+        }
+        else if (event.type == SDL_EVENT_KEY_UP)
+        {
+            auto key_code = getChipEightKey(event.key.scancode);
+            if (key_code)
+            {
+                chip8.setKeyState(*key_code, false);
+            }
+        }
+    }
+
+    return true;
+}
+
+bool renderDisplay(SDL_Renderer *renderer, const Chip8 &chip8)
+{
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+    const auto &display = chip8.getDisplay();
+    const auto display_rows = display.size();
+    const auto display_cols = display.at(0).size();
+
+    for (int y = 0; y < display_rows; y++)
+    {
+        for (int x = 0; x < display_cols; x++)
+        {
+            if (display[y][x] == 1)
+            {
+                SDL_FRect fillRect = {static_cast<float>(x) * DISPLAY_SCALE, static_cast<float>(y) * DISPLAY_SCALE, static_cast<float>(DISPLAY_SCALE), static_cast<float>(DISPLAY_SCALE)};
+                SDL_RenderFillRect(renderer, &fillRect);
+            }
+        }
+    }
+
+    if (!SDL_RenderPresent(renderer))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool updateAudio(SDL_AudioStream *audioStream, const Chip8 &chip8, const std::vector<std::int16_t> &sample, int toneBufferBytes, bool &wasSoundActive)
+{
+    if (chip8.isSoundActive())
+    {
+        wasSoundActive = true;
+
+        int soundQueueLength = SDL_GetAudioStreamQueued(audioStream);
+        if (soundQueueLength == -1)
+        {
+            std::cout << "Failed to queue audio stream: " << SDL_GetError() << "\n";
+            return false;
+        }
+
+        if (soundQueueLength < toneBufferBytes)
+        {
+            if (!SDL_PutAudioStreamData(audioStream, sample.data(), toneBufferBytes))
+            {
+                std::cout << "Failed to queue audio stream: " << SDL_GetError() << "\n";
+                return false;
+            }
+        }
+    }
+    else
+    {
+        if (wasSoundActive)
+        {
+            wasSoundActive = false;
+            if (!SDL_ClearAudioStream(audioStream))
+            {
+                std::cout << "Failed to clear audio stream: " << SDL_GetError() << "\n";
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 int main(int argc, char *argv[])
@@ -135,17 +247,16 @@ int main(int argc, char *argv[])
 
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
-    float scale = 15;
 
     SDL_AudioSpec audioSpec{
         SDL_AUDIO_S16,
         1,
-        48000};
+        AUDIO_SAMPLE_RATE};
 
     if (!SDL_CreateWindowAndRenderer(
             "CHIP-8 Emulator",
-            64 * scale,
-            32 * scale,
+            DISPLAY_WIDTH * DISPLAY_SCALE,
+            DISPLAY_HEIGHT * DISPLAY_SCALE,
             0,
             &window,
             &renderer))
@@ -168,7 +279,10 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    SDL_ResumeAudioStreamDevice(audioStream);
+    if (!SDL_ResumeAudioStreamDevice(audioStream))
+    {
+        std::cout << "Failed to resume audio stream: " << SDL_GetError() << "\n";
+    }
 
     std::vector<std::int16_t> sample = generateToneBuffer();
     int toneBufferBytes = sample.size() * sizeof(sample[0]);
@@ -176,45 +290,27 @@ int main(int argc, char *argv[])
     auto startTime = std::chrono::steady_clock::now();
 
     auto lastTimerTick = startTime;
-    auto timerInterval = std::chrono::nanoseconds(1'000'000'000 / 60); // 1 second = 1 bilion nanoseconds
+    auto timerInterval = std::chrono::nanoseconds(1'000'000'000 / TIMER_FREQUENCY); // 1 second = 1 bilion nanoseconds
 
     auto lastCpuTick = startTime;
-    auto cpuInterval = std::chrono::nanoseconds(1'000'000'000 / 700);
+    auto cpuInterval = std::chrono::nanoseconds(1'000'000'000 / CPU_FREQUENCY);
 
     auto lastRenderTick = startTime;
-    auto renderInterval = std::chrono::nanoseconds(1'000'000'000 / 60);
+    auto renderInterval = std::chrono::nanoseconds(1'000'000'000 / RENDER_FREQUENCY);
 
     bool running = true;
     bool wasSoundActive = false;
 
     while (running)
     {
-        SDL_Event event;
-
-        while (SDL_PollEvent(&event))
+        if (!processEvents(chip8))
         {
-            if (event.type == SDL_EVENT_QUIT)
-            {
-                running = false;
-            }
+            running = false;
+        }
 
-            if (event.type == SDL_EVENT_KEY_DOWN)
-            {
-                auto key_code = getChipEightKey(event.key.scancode);
-                if (key_code)
-                {
-                    chip8.setKeyState(key_code.value(), true);
-                }
-            }
-
-            if (event.type == SDL_EVENT_KEY_UP)
-            {
-                auto key_code = getChipEightKey(event.key.scancode);
-                if (key_code)
-                {
-                    chip8.setKeyState(*key_code, false);
-                }
-            }
+        if (!running)
+        {
+            break;
         }
 
         auto currentTime = std::chrono::steady_clock::now();
@@ -244,43 +340,22 @@ int main(int argc, char *argv[])
         {
             lastRenderTick = currentTime;
 
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-            SDL_RenderClear(renderer);
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            const auto &display = chip8.getDisplay();
-            for (int y = 0; y < 32; y++)
-            {
-                for (int x = 0; x < 64; x++)
-                {
-                    if (display[y][x] == 1)
-                    {
-                        SDL_FRect fillRect = {static_cast<float>(x) * scale, static_cast<float>(y) * scale, scale, scale};
-                        SDL_RenderFillRect(renderer, &fillRect);
-                    }
-                }
-            }
-            if (!SDL_RenderPresent(renderer))
-            {
-                running = false;
-            }
+            running = renderDisplay(renderer, chip8);
         }
 
-        if (chip8.isSoundActive())
+        if (!running)
         {
-            wasSoundActive = true;
-            int soundQueueLength = SDL_GetAudioStreamQueued(audioStream);
-            if (soundQueueLength < toneBufferBytes)
-            {
-                SDL_PutAudioStreamData(audioStream, sample.data(), toneBufferBytes);
-            }
+            break;
         }
-        else
+
+        if (!updateAudio(audioStream, chip8, sample, toneBufferBytes, wasSoundActive))
         {
-            if (wasSoundActive)
-            {
-                SDL_ClearAudioStream(audioStream);
-                wasSoundActive = false;
-            }
+            running = false;
+        }
+
+        if (!running)
+        {
+            break;
         }
 
         auto waitTime = std::min({lastCpuTick + cpuInterval, lastTimerTick + timerInterval, lastRenderTick + renderInterval});
