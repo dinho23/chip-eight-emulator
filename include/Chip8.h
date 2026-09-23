@@ -19,10 +19,9 @@ public:
 
     bool loadRom(const std::string &path);
     bool isSoundActive() const;
+    bool cycle();
 
-    void cycle();
     void tickTimers();
-
     void setKeyState(std::uint8_t key, bool pressed);
 
     const std::array<std::array<std::uint8_t, 64>, 32> &getDisplay() const;

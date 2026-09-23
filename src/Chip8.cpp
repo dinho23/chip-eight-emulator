@@ -129,11 +129,21 @@ bool Chip8::loadRom(const std::string &path)
             LOG_DEBUG("All characters read successfully!\n");
 
             size_t j = 0;
-            for (uint16_t i = this->pc_; i < pc_ + length; i++)
+
+            if (pc_ + length > memory_.size())
             {
-                this->memory_.at(i) = buffer.at(j);
-                j++;
+                LOG_DEBUG("Buffer exceeds available memory. ROM too large.\n");
+                return false;
             }
+            else
+            {
+                for (uint16_t i = pc_; i < pc_ + length; i++)
+                {
+                    memory_.at(i) = buffer.at(j);
+                    j++;
+                }
+            }
+
             LOG_DEBUG("Successfully loaded ROM into memory.\n");
 
             return true;
@@ -156,8 +166,14 @@ bool Chip8::isSoundActive() const
     return soundTimer_ > 0;
 }
 
-void Chip8::cycle()
+bool Chip8::cycle()
 {
+    if (static_cast<std::size_t>(pc_) + 1 >= memory_.size())
+    {
+        LOG_DEBUG("PC out of bounds: " << pc_ << "\n");
+        return false;
+    }
+
     std::uint16_t opCode = 0;
 
     std::cout << std::hex;
@@ -182,7 +198,7 @@ void Chip8::cycle()
         if (sp_ == 0)
         {
             LOG_DEBUG("Invalid return instruction given, stack is empty.\n");
-            return;
+            return false;
         }
 
         LOG_DEBUG("Returing from subroutine");
@@ -215,7 +231,7 @@ void Chip8::cycle()
         if (sp_ == stack_.size())
         {
             LOG_DEBUG("Invalid call instruction given, stack is full.\n");
-            return;
+            return false;
         }
 
         stack_.at(sp_) = pc_ + 2;
@@ -426,27 +442,34 @@ void Chip8::cycle()
         // Display N-byte sprite starting at memory location I at (VX, VY).
         // Each set bit of XOR-ed with what's already drawn.
         // VF is set to 1 if a collision occurs. 0 otherwise.
-        LOG_DEBUG("Drawing " << n << "-byte sprite at (" << int(v_.at(x)) << "," << int(v_.at(y)) << ")\n");
-
-        v_.at(0xF) = 0;
-
-        for (std::uint8_t i = 0; i < n; i++)
+        if (index_ + n > memory_.size())
         {
-            std::uint8_t sprite_byte = memory_[index_ + i];
+            LOG_DEBUG("Sprite exceeds memory bounds at " << index_ + n - 1 << ", Display not modified.\n");
+        }
+        else
+        {
+            LOG_DEBUG("Drawing " << n << "-byte sprite at (" << int(v_.at(x)) << "," << int(v_.at(y)) << ")\n");
 
-            for (std::uint8_t j = 0; j < 8; j++)
+            v_.at(0xF) = 0;
+
+            for (std::uint8_t i = 0; i < n; i++)
             {
-                std::uint8_t sprite_pixel = (sprite_byte >> (7 - j)) & 1;
+                std::uint8_t sprite_byte = memory_[index_ + i];
 
-                std::uint8_t screen_y = (v_.at(y) + i) % 32;
-                std::uint8_t screen_x = (v_.at(x) + j) % 64;
-
-                auto old_pixel = display_[screen_y][screen_x];
-                display_.at(screen_y).at(screen_x) = old_pixel ^ sprite_pixel;
-
-                if (old_pixel == 1 && sprite_pixel == 1)
+                for (std::uint8_t j = 0; j < 8; j++)
                 {
-                    v_.at(0xF) = 1;
+                    std::uint8_t sprite_pixel = (sprite_byte >> (7 - j)) & 1;
+
+                    std::uint8_t screen_y = (v_.at(y) + i) % 32;
+                    std::uint8_t screen_x = (v_.at(x) + j) % 64;
+
+                    auto old_pixel = display_[screen_y][screen_x];
+                    display_.at(screen_y).at(screen_x) = old_pixel ^ sprite_pixel;
+
+                    if (old_pixel == 1 && sprite_pixel == 1)
+                    {
+                        v_.at(0xF) = 1;
+                    }
                 }
             }
         }
@@ -499,19 +522,19 @@ void Chip8::cycle()
             fx0aState = Fx0aState::Idle;
         }
     }
-    else if (family == 0xF && nn == 0x0015)
+    else if (family == 0xF && nn == 0x15)
     {
         // Set the delay timer DT to VX.
         LOG_DEBUG("Setting delay timer to V" << x << ": " << int(v_.at(x)) << "\n");
         delayTimer_ = v_.at(x);
     }
-    else if (family == 0xF && nn == 0x0018)
+    else if (family == 0xF && nn == 0x18)
     {
         // Set the sound timer ST to VX.
         LOG_DEBUG("Setting sound timer to V" << x << ": " << int(v_.at(x)) << "\n");
         soundTimer_ = v_.at(x);
     }
-    else if (family == 0xF && nn == 0x001E)
+    else if (family == 0xF && nn == 0x1E)
     {
         // Add VX to I.
         // VF is set to 1 if I > 0x0FFF. Otherwise set to 0.
@@ -528,7 +551,7 @@ void Chip8::cycle()
             v_.at(0xF) = 0;
         }
     }
-    else if (family == 0xF && nn == 0x0029)
+    else if (family == 0xF && nn == 0x29)
     {
         // Set I = location of sprite for digit Vx.
         // The value of I is set to the location for the hexadecimal sprite corresponding to the value of Vx.
@@ -538,36 +561,57 @@ void Chip8::cycle()
 
         index_ = digit * 5;
     }
-    else if (family == 0xF && nn == 0x0033)
+    else if (family == 0xF && nn == 0x33)
     {
         // Convert the value stored in VX to BCD and store the 3 digits at memory location I through I+2.
         // I does not change.
-        LOG_DEBUG("Converting V" << x << ": " << int(v_.at(x)) << " to BCD.\n");
+        if (index_ + 2 >= memory_.size())
+        {
+            LOG_DEBUG("Memory out of bounds.\n");
+        }
+        else
+        {
+            LOG_DEBUG("Converting V" << x << ": " << int(v_.at(x)) << " to BCD.\n");
 
-        memory_[index_] = v_.at(x) / 100;
-        memory_[index_ + 1] = (v_.at(x) / 10) % 10;
-        memory_[index_ + 2] = v_.at(x) % 10;
+            memory_.at(index_) = v_.at(x) / 100;
+            memory_.at(index_ + 1) = (v_.at(x) / 10) % 10;
+            memory_.at(index_ + 2) = v_.at(x) % 10;
+        }
     }
-    else if (family == 0xF && nn == 0x0055)
+    else if (family == 0xF && nn == 0x55)
     {
         // Store registers V0 through VX in memory starting at location I.
         // I does not change.
-        LOG_DEBUG("Copying from registers into memory. Start index: " << index_ << " End index: " << index_ + x << "\n");
-
-        for (std::uint16_t i = 0; i <= x; i++)
+        if (index_ + x >= memory_.size())
         {
-            memory_.at(i + index_) = v_.at(i);
+            LOG_DEBUG("Memory out of bounds.\n");
+        }
+        else
+        {
+            LOG_DEBUG("Copying from registers into memory. Start index: " << index_ << " End index: " << index_ + x << "\n");
+
+            for (std::uint16_t i = 0; i <= x; i++)
+            {
+                memory_.at(i + index_) = v_.at(i);
+            }
         }
     }
-    else if (family == 0xF && nn == 0x0065)
+    else if (family == 0xF && nn == 0x65)
     {
         // Copy values from memory location I through I + X into registers V0 through VX.
         // I does not change.
-        LOG_DEBUG("Copying from memory into registers. Start index: " << index_ << " End index: " << index_ + x << "\n");
-
-        for (std::uint16_t i = 0; i <= x; i++)
+        if (index_ + x >= memory_.size())
         {
-            v_.at(i) = memory_.at(i + index_);
+            LOG_DEBUG("Memory out of bounds.\n");
+        }
+        else
+        {
+            LOG_DEBUG("Copying from memory into registers. Start index: " << index_ << " End index: " << index_ + x << "\n");
+
+            for (std::uint16_t i = 0; i <= x; i++)
+            {
+                v_.at(i) = memory_.at(i + index_);
+            }
         }
     }
     else
@@ -579,6 +623,8 @@ void Chip8::cycle()
     {
         pc_ += 2;
     }
+
+    return true;
 }
 
 void Chip8::tickTimers()

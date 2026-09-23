@@ -219,10 +219,19 @@ int main(int argc, char *argv[])
 
         auto currentTime = std::chrono::steady_clock::now();
 
-        while (currentTime >= lastCpuTick + cpuInterval)
+        while (running && currentTime >= lastCpuTick + cpuInterval)
         {
             lastCpuTick += cpuInterval;
-            chip8.cycle();
+            if (!chip8.cycle())
+            {
+                std::cout << "Fatal emulation error. Emulator stopped working.\n";
+                running = false;
+            }
+        }
+
+        if (!running)
+        {
+            break;
         }
 
         while (currentTime >= lastTimerTick + timerInterval)
