@@ -569,48 +569,6 @@ void Chip8::cycle()
     {
         pc_ += 2;
     }
-
-    std::cout << "PC: " << pc_ << "\n";
-    std::cout << "SP: " << int(sp_) << "\n";
-    std::cout << "INDEX: " << int(index_) << "\n";
-    std::cout << "STACK: ";
-    for (const auto &item : stack_)
-    {
-        std::cout << int(item) << " ";
-    }
-    std::cout << "\n";
-    std::cout << "REGISTERS: ";
-    for (const auto &item : v_)
-    {
-        std::cout << int(item) << " ";
-    }
-    std::cout << "\n";
-    std::cout << "MEMORY: ";
-    for (size_t i = 0; i < 4096; i++)
-    {
-        if (memory_.at(i) != 0)
-        {
-            std::cout << "M[" << i << "]: " << int(memory_.at(i)) << "    ";
-        }
-    }
-    std::cout << "\n";
-    // std::cout << "DISPLAY:\n";
-    // for (size_t i = 0; i < 32; i++)
-    // {
-    //     for (size_t j = 0; j < 64; j++)
-    //     {
-    //         if (display_.at(i).at(j) == 0)
-    //         {
-    //             std::cout << ". ";
-    //         }
-    //         else
-    //         {
-    //             std::cout << "# ";
-    //         }
-    //     }
-    //     std::cout << "\n";
-    // }
-    // std::cout << "\n";
 }
 
 void Chip8::tickTimers()
