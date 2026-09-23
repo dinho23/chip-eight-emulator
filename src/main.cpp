@@ -103,7 +103,7 @@ std::vector<std::int16_t> generateToneBuffer()
 {
     std::vector<std::int16_t> sample{};
 
-    for (int i = 0; i < AUDIO_SAMPLE_RATE / AUDIO_BUFFER_MS; i++)
+    for (int i = 0; i < AUDIO_SAMPLE_RATE / (AUDIO_BUFFER_MS * 10); i++)
     {
         auto positionInWave = i % (AUDIO_SAMPLE_RATE / AUDIO_TONE_FREQUENCY);
 
